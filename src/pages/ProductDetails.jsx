@@ -9,6 +9,7 @@ import {
   Chip,
   CircularProgress
 } from "@mui/material"
+import ReviewSection from "../components/ReviewSection"
 import { CartContext } from "../Context/CartContext"
 
 const ProductDetails = () => {
@@ -149,6 +150,7 @@ const ProductDetails = () => {
         </Grid>
 
       </Grid>
+      <ReviewSection productId={product.id} />
     </Container>
   )
 }
