@@ -8,8 +8,13 @@ import SuccessPage from './pages/SuccessPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrdersPage from "./pages/OrdersPage"
 import OrderDetails from "./pages/OrderDetails"
+import {useAuth} from "./Context/AuthContext"
+import Login from "./pages/Login"
 
 const App = () => {
+  const { user } = useAuth()
+
+  if(!user) return <Login />
 
   return (
     <>

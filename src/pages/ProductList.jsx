@@ -14,10 +14,15 @@ import {
 } from "@mui/material"
 
 import ProductCard from "../components/ProductCard"
+import { useAuth } from "../Context/AuthContext"
 
 const ProductList = () => {
 
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState(() => {
+    const saved = localStorage.getItem("products")
+    return saved ? JSON.parse(saved) : []
+  })
+
   const [totalProducts, setTotalProducts] = useState(0)
 
   const [search, setSearch] = useState("")
@@ -30,6 +35,11 @@ const ProductList = () => {
   const [page, setPage] = useState(1)
   const [productsPerPage, setProductsPerPage] = useState(8)
 
+  const { user } = useAuth()
+
+  useEffect(() => {
+    localStorage.setItem("products", JSON.stringify(products))
+  }, [products])
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -46,7 +56,20 @@ const ProductList = () => {
 
         const data = await res.json()
 
-        setProducts(data.products)
+        setProducts(prev => {
+          const existing = prev.reduce((acc, p) => {
+            acc[p.id] = p
+            return acc
+          }, {})
+
+          return data.products.map(p => ({
+            ...p,
+            hidden: existing[p.id]?.hidden ?? false,
+            featured: existing[p.id]?.featured ?? false,
+            inStock: existing[p.id]?.inStock ?? true
+          }))
+        })
+
         setTotalProducts(data.total)
 
       } catch (err) {
@@ -79,6 +102,8 @@ const ProductList = () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
+      if (user?.role !== "admin" && product.hidden) return false
+
       const matchesSearch =
         product.title.toLowerCase().includes(search.toLowerCase())
 
@@ -87,7 +112,7 @@ const ProductList = () => {
 
       return matchesSearch && matchesCategory
     })
-  }, [products, search, category])
+  }, [products, search, category, user])
 
   const sortedProducts = useMemo(() => {
     let sorted = [...filteredProducts]
@@ -98,7 +123,31 @@ const ProductList = () => {
     return sorted
   }, [filteredProducts, sort])
 
-  const totalPages = Math.ceil(totalProducts / productsPerPage)
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
+
+  const toggleHide = (id) => {
+    setProducts(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, hidden: !p.hidden} : p
+      )
+    )
+  }
+
+  const toggleFeatured = (id) => {
+    setProducts(prev => 
+      prev.map(p => 
+        p.id === id ? {...p, featured: !p.featured} :p
+      )
+    )
+  }
+
+  const toggleStock = (id) => {
+    setProducts(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, inStock: !p.inStock} : p
+      )
+    )
+  }
 
   if (loading) {
     return (
@@ -158,7 +207,14 @@ const ProductList = () => {
         <Grid container spacing={3}>
           {sortedProducts.map(product => (
             <Grid key={product.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-              <ProductCard product={product} />
+
+              <ProductCard 
+                product={product}
+                toggleHide={toggleHide}
+                toggleFeatured={toggleFeatured}
+                toggleStock={toggleStock} 
+              />
+
             </Grid>
           ))}
         </Grid>

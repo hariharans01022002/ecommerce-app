@@ -2,16 +2,20 @@ import {Typography, Card, CardContent, Button, Box } from '@mui/material'
 import { useContext } from 'react'
 import { Link } from "react-router-dom"
 import { CartContext } from '../Context/CartContext'
+import { useAuth } from "../Context/AuthContext"
 
-const ProductCard = ({product}) => {
+  const ProductCard = ({
+    product,
+    toggleHide,
+    toggleFeatured,
+    toggleStock,
+  }) => {
 
+  const { user } = useAuth()
   const { addToCart } = useContext(CartContext)
 
   return (
-    <Link
-      to={`/product/${product.id}`}
-      style={{ textDecoration: "none" }}
-    >
+
         <Card
             sx={{
               
@@ -27,6 +31,11 @@ const ProductCard = ({product}) => {
             },
           }}
         >
+
+      <Link
+        to={`/product/${product.id}`}
+        style={{ textDecoration: "none" }}
+      >
       
         <Box
           sx={{
@@ -75,6 +84,26 @@ const ProductCard = ({product}) => {
           {product.title}
         </Typography>
 
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          {product.hidden && (
+            <Typography variant="caption" color="error">
+              🙈 Hidden
+            </Typography>
+          )}
+
+          {product.featured && (
+            <Typography variant="caption" color="warning.main">
+              ⭐ Featured
+            </Typography>
+          )}
+
+          {!product.inStock && (
+            <Typography variant="caption" color="error">
+              ❌ Out of Stock
+            </Typography>
+          )}
+        </Box>
+
         <Typography
           variant="h6"
           sx={{
@@ -86,11 +115,13 @@ const ProductCard = ({product}) => {
           ${product.price}
         </Typography>
       </CardContent>
+      </Link>
 
       
       <Button
         variant="contained"
         fullWidth
+        disabled={!product.inStock}
         sx={{
           borderRadius: 0,
           borderBottomLeftRadius: 12,
@@ -100,16 +131,49 @@ const ProductCard = ({product}) => {
           letterSpacing: 0.8,
           fontSize: "0.75rem",
         }}
-        onClick={(e) => {
-          e.preventDefault()
+        onClick={() => {
           addToCart(product)
         }}
       >
-        Add to Cart
+        {product.inStock ? "Add to Cart" : "Out of Stock"}
       </Button>
+
+      {user?.role === "admin" && (
+      <Box sx={{ p: 1, display: "flex", gap: 1, flexWrap: "wrap" }}>
+        
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            toggleHide(product.id)
+          }}
+        >
+          {product.hidden ? "Unhide" : "Hide"}
+        </Button>
+
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => {
+            toggleFeatured(product.id)
+          }}
+        >
+          {product.featured ? "Unfeature" : "Feature"}
+        </Button>
+
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => 
+            toggleStock(product.id)
+          }
+        >
+          {product.inStock ? "Out" : "In"}
+        </Button>
+
+      </Box>
+    )}
     </Card>
-    
-    </Link>
   )
 }
 
