@@ -123,7 +123,7 @@ const ProductList = () => {
     return sorted
   }, [filteredProducts, sort])
 
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
+  const totalPages = Math.ceil(totalProducts / productsPerPage)
 
   const toggleHide = (id) => {
     setProducts(prev =>
