@@ -2,9 +2,11 @@ import React from 'react'
 import { useState } from "react"
 import{ useAuth } from "../Context/AuthContext"
 import { Box, TextField, Button, Typography, Paper } from "@mui/material"
+import { useNavigate } from 'react-router-dom'
 
 const Login = () => {
     const { login } = useAuth()
+    const navigate = useNavigate()
 
     const [userName, setUserName] = useState("")
     const [password, setPassword] = useState("")
@@ -16,6 +18,7 @@ const Login = () => {
         setError("Invalid username or password")
     } else {
         setError("")
+        navigate("/")
     }
     }
 
