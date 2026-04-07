@@ -1,7 +1,6 @@
 import { Box, Typography, Divider } from "@mui/material"
 
 const OrderSummary = ({ cart }) => {
-
   const totalPrice = cart.reduce(
     (total, item) => total + item.price * item.quantity,
     0
@@ -17,13 +16,12 @@ const OrderSummary = ({ cart }) => {
         backgroundColor: "#fafafa"
       }}
     >
-
       <Typography variant="h6" gutterBottom>
         Order Summary
       </Typography>
 
       {cart.length === 0 ? (
-        <Typography>No items</Typography>
+        <Typography color="text.secondary">No items</Typography>
       ) : (
         cart.map(item => (
           <Box
@@ -35,11 +33,9 @@ const OrderSummary = ({ cart }) => {
               mb: 2
             }}
           >
-
-            {/* IMAGE */}
             <Box
               component="img"
-              src={item.image}
+              src={item.thumbnail || item.image || ""}
               alt={item.title}
               sx={{
                 width: 60,
@@ -47,26 +43,23 @@ const OrderSummary = ({ cart }) => {
                 objectFit: "contain",
                 bgcolor: "#fff",
                 borderRadius: 2,
-                p: 1
+                p: 1,
+                border: "1px solid #e0e0e0"
               }}
             />
 
-            {/* DETAILS */}
             <Box sx={{ flexGrow: 1 }}>
-              <Typography variant="body2">
+              <Typography variant="body2" fontWeight={600}>
                 {item.title}
               </Typography>
-
               <Typography variant="caption" color="text.secondary">
-                Qty: {item.quantity}
+                Qty: {item.quantity} × ${item.price.toFixed(2)}
               </Typography>
             </Box>
 
-            {/* PRICE */}
             <Typography fontWeight="bold">
               ${(item.price * item.quantity).toFixed(2)}
             </Typography>
-
           </Box>
         ))
       )}
@@ -74,15 +67,9 @@ const OrderSummary = ({ cart }) => {
       <Divider sx={{ my: 2 }} />
 
       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Typography fontWeight="bold">
-          Total
-        </Typography>
-
-        <Typography fontWeight="bold">
-          ${totalPrice.toFixed(2)}
-        </Typography>
+        <Typography fontWeight="bold">Total</Typography>
+        <Typography fontWeight="bold">${totalPrice.toFixed(2)}</Typography>
       </Box>
-
     </Box>
   )
 }

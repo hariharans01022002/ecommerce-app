@@ -18,12 +18,10 @@ import { useAuth } from "../Context/AuthContext"
 
 const ProductList = () => {
 
-  const [products, setProducts] = useState(() => {
+  const [allProducts, setAllProducts] = useState(() => {
     const saved = localStorage.getItem("products")
     return saved ? JSON.parse(saved) : []
   })
-
-  const [totalProducts, setTotalProducts] = useState(0)
 
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("all")
@@ -35,28 +33,25 @@ const ProductList = () => {
   const [page, setPage] = useState(1)
   const [productsPerPage, setProductsPerPage] = useState(8)
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+
   const { user } = useAuth()
 
   useEffect(() => {
-    localStorage.setItem("products", JSON.stringify(products))
-  }, [products])
+    localStorage.setItem("products", JSON.stringify(allProducts))
+  }, [allProducts])
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchAllProducts = async () => {
       try {
         setLoading(true)
-
-        const skip = (page - 1) * productsPerPage
-
-        const res = await fetch(
-          `https://dummyjson.com/products?limit=${productsPerPage}&skip=${skip}`
-        )
+        const res = await fetch("https://dummyjson.com/products?limit=100")
 
         if (!res.ok) throw new Error("Failed to fetch")
 
         const data = await res.json()
 
-        setProducts(prev => {
+        setAllProducts(prev => {
           const existing = prev.reduce((acc, p) => {
             acc[p.id] = p
             return acc
@@ -70,21 +65,24 @@ const ProductList = () => {
           }))
         })
 
-        setTotalProducts(data.total)
+        setIsInitialLoad(false)
 
       } catch (err) {
         setError("Failed to load products")
+        setIsInitialLoad(false)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProducts()
-  }, [page, productsPerPage])
+    if (isInitialLoad) {
+      fetchAllProducts()
+    }
+  }, [isInitialLoad])
 
   useEffect(() => {
     setPage(1)
-  }, [search, category, sort, productsPerPage])
+  }, [search, category, sort])
 
   const handlePageChange = (event, value) => {
     setPage(value)
@@ -92,16 +90,16 @@ const ProductList = () => {
   }
 
   const handlePerPageChange = (e) => {
-    setProductsPerPage(e.target.value)
+    setProductsPerPage(Number(e.target.value))
+    setPage(1)
   }
 
   const categories = useMemo(() => {
-    return ["all", ...new Set(products.map(p => p.category))]
-  }, [products])
-
+    return ["all", ...new Set(allProducts.map(p => p.category))]
+  }, [allProducts])
 
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
+    return allProducts.filter(product => {
       if (user?.role !== "admin" && product.hidden) return false
 
       const matchesSearch =
@@ -112,7 +110,7 @@ const ProductList = () => {
 
       return matchesSearch && matchesCategory
     })
-  }, [products, search, category, user])
+  }, [allProducts, search, category, user])
 
   const sortedProducts = useMemo(() => {
     let sorted = [...filteredProducts]
@@ -123,28 +121,33 @@ const ProductList = () => {
     return sorted
   }, [filteredProducts, sort])
 
-  const totalPages = Math.ceil(totalProducts / productsPerPage)
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (page - 1) * productsPerPage
+    return sortedProducts.slice(startIndex, startIndex + productsPerPage)
+  }, [sortedProducts, page, productsPerPage])
+
+  const totalPages = Math.ceil(sortedProducts.length / productsPerPage)
 
   const toggleHide = (id) => {
-    setProducts(prev =>
+    setAllProducts(prev =>
       prev.map(p =>
-        p.id === id ? { ...p, hidden: !p.hidden} : p
+        p.id === id ? { ...p, hidden: !p.hidden } : p
       )
     )
   }
 
   const toggleFeatured = (id) => {
-    setProducts(prev => 
+    setAllProducts(prev => 
       prev.map(p => 
-        p.id === id ? {...p, featured: !p.featured} :p
+        p.id === id ? { ...p, featured: !p.featured } : p
       )
     )
   }
 
   const toggleStock = (id) => {
-    setProducts(prev =>
+    setAllProducts(prev =>
       prev.map(p =>
-        p.id === id ? { ...p, inStock: !p.inStock} : p
+        p.id === id ? { ...p, inStock: !p.inStock } : p
       )
     )
   }
@@ -177,35 +180,49 @@ const ProductList = () => {
           size="small"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          sx={{ minWidth: 200 }}
         />
 
-        <Select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          size="small"
-        >
-          {categories.map(cat => (
-            <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-          ))}
-        </Select>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Category</InputLabel>
+          <Select
+            value={category}
+            label="Category"
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            {categories.map(cat => (
+              <MenuItem key={cat} value={cat}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-        <Select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          size="small"
-        >
-          <MenuItem value="">None</MenuItem>
-          <MenuItem value="low">Price: Low → High</MenuItem>
-          <MenuItem value="high">Price: High → Low</MenuItem>
-        </Select>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>Sort</InputLabel>
+          <Select
+            value={sort}
+            label="Sort"
+            onChange={(e) => setSort(e.target.value)}
+          >
+            <MenuItem value="">None</MenuItem>
+            <MenuItem value="low">Price: Low → High</MenuItem>
+            <MenuItem value="high">Price: High → Low</MenuItem>
+          </Select>
+        </FormControl>
 
       </Box>
 
-      {sortedProducts.length === 0 ? (
+      {/* Results count */}
+      <Typography sx={{ mb: 2 }}>
+        Showing {paginatedProducts.length > 0 ? (page - 1) * productsPerPage + 1 : 0} - {Math.min(page * productsPerPage, sortedProducts.length)} of {sortedProducts.length} products
+      </Typography>
+
+      {paginatedProducts.length === 0 ? (
         <Typography>No products found</Typography>
       ) : (
         <Grid container spacing={3}>
-          {sortedProducts.map(product => (
+          {paginatedProducts.map(product => (
             <Grid key={product.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
 
               <ProductCard 
@@ -220,38 +237,40 @@ const ProductList = () => {
         </Grid>
       )}
 
-      <Box sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        mt: 5,
-      }}>
+      {totalPages > 1 && (
+        <Box sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mt: 5,
+        }}>
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Products per page</InputLabel>
-          <Select
-            value={productsPerPage}
-            label="Products per page"
-            onChange={handlePerPageChange}
-          >
-            <MenuItem value={5}>5</MenuItem>
-            <MenuItem value={8}>8</MenuItem>
-            <MenuItem value={10}>10</MenuItem>
-            <MenuItem value={20}>20</MenuItem>
-          </Select>
-        </FormControl>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>Products per page</InputLabel>
+            <Select
+              value={productsPerPage}
+              label="Products per page"
+              onChange={handlePerPageChange}
+            >
+              <MenuItem value={5}>5</MenuItem>
+              <MenuItem value={8}>8</MenuItem>
+              <MenuItem value={10}>10</MenuItem>
+              <MenuItem value={20}>20</MenuItem>
+            </Select>
+          </FormControl>
 
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={handlePageChange}
-          color="primary"
-          size="large"
-        />
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            size="large"
+          />
 
-        <Box sx={{ minWidth: 150 }} />
+          <Box sx={{ minWidth: 150 }} />
 
-      </Box>
+        </Box>
+      )}
 
     </Container>
   )

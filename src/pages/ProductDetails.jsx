@@ -7,7 +7,9 @@ import {
   Button,
   Box,
   Chip,
-  CircularProgress
+  CircularProgress,
+  Rating,
+  TextField
 } from "@mui/material"
 import ReviewSection from "../components/ReviewSection"
 import { CartContext } from "../Context/CartContext"
@@ -20,31 +22,44 @@ const ProductDetails = () => {
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [quantity, setQuantity] = useState(1)
 
-  const fetchProduct = async () => {
-    try {
-      setLoading(true)
-      setError("")
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true)
+        setError("")
 
-      const res = await fetch(`https://dummyjson.com/products/${id}`)
+        const res = await fetch(`https://dummyjson.com/products/${id}`)
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch product")
+        if (!res.ok) {
+          throw new Error("Failed to fetch product")
+        }
+
+        const data = await res.json()
+        setProduct(data)
+
+      } catch (err) {
+        setError("Something went wrong. Please try again.")
+      } finally {
+        setLoading(false)
       }
+    }
 
-      const data = await res.json()
-      setProduct(data)
+    fetchProduct()
+  }, [id])
 
-    } catch (err) {
-      setError("Something went wrong. Please try again.")
-    } finally {
-      setLoading(false)
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart({ ...product, quantity })
+      setQuantity(1)
     }
   }
 
-  useEffect(() => {
-    fetchProduct()
-  }, [id])
+  const handleQuantityChange = (e) => {
+    const value = Math.max(1, Number(e.target.value))
+    setQuantity(value)
+  }
 
   if (loading) {
     return (
@@ -62,16 +77,28 @@ const ProductDetails = () => {
           {error}
         </Typography>
 
-        <Button variant="contained" sx={{ mt: 2 }} onClick={fetchProduct}>
+        <Button 
+          variant="contained" 
+          sx={{ mt: 2 }} 
+          onClick={() => window.location.reload()}
+        >
           Retry
         </Button>
       </Container>
     )
   }
 
+  if (!product) {
+    return (
+      <Container sx={{ mt: 8, textAlign: "center" }}>
+        <Typography>Product not found</Typography>
+      </Container>
+    )
+  }
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 8 }}>
-      <Grid container spacing={10} alignItems="center">
+    <Container maxWidth="lg" sx={{ mt: 8, mb: 8 }}>
+      <Grid container spacing={10} alignItems="flex-start">
 
         {/* IMAGE */}
         <Grid size={{ xs: 12, md: 6 }}>
@@ -116,7 +143,17 @@ const ProductDetails = () => {
               {product.title}
             </Typography>
 
-            <Chip label={product.category} sx={{ width: "fit-content" }} />
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <Rating value={product.rating} readOnly precision={0.1} />
+              <Typography variant="body2" color="text.secondary">
+                ({product.rating})
+              </Typography>
+            </Box>
+
+            <Chip 
+              label={product.category} 
+              sx={{ width: "fit-content" }} 
+            />
 
             <Typography
               variant="h5"
@@ -128,6 +165,15 @@ const ProductDetails = () => {
               ${product.price}
             </Typography>
 
+            {product.discountPercentage && (
+              <Typography 
+                variant="body2" 
+                sx={{ color: "success.main", fontWeight: 500 }}
+              >
+                Save {product.discountPercentage}%
+              </Typography>
+            )}
+
             <Typography
               sx={{
                 lineHeight: 1.8,
@@ -137,20 +183,39 @@ const ProductDetails = () => {
               {product.description}
             </Typography>
 
-            <Button
-              variant="contained"
-              size="large"
-              sx={{ width: "fit-content" }}
-              onClick={() => addToCart(product)}
-            >
-              Add to Cart
-            </Button>
+            <Typography variant="body2" fontWeight={500}>
+              Stock: <span style={{ color: product.stock > 0 ? "green" : "red" }}>
+                {product.stock > 0 ? `${product.stock} available` : "Out of stock"}
+              </span>
+            </Typography>
+
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <TextField
+                label="Quantity"
+                type="number"
+                size="small"
+                value={quantity}
+                onChange={handleQuantityChange}
+                inputProps={{ min: 1, max: product.stock }}
+                sx={{ width: 100 }}
+              />
+
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleAddToCart}
+                disabled={product.stock === 0}
+              >
+                Add to Cart
+              </Button>
+            </Box>
 
           </Box>
         </Grid>
 
       </Grid>
-      <ReviewSection productId={product.id} />
+
+      {product && <ReviewSection productId={product.id} />}
     </Container>
   )
 }

@@ -1,68 +1,104 @@
+import { useMemo, useContext } from "react"
 import { AppBar, Toolbar, Typography, Box, IconButton, Button } from "@mui/material"
 import CartButton from "./CartButton"
-import { useContext } from "react"
 import { CartContext } from "../Context/CartContext"
 import { Link } from "react-router-dom"
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"
 import { useAuth } from "../Context/AuthContext"
 
-
 const Navbar = () => {
-
-  const {cart} = useContext(CartContext)
-
-  const cartCount = cart.reduce(
-    (total, item) => total + item.quantity, 0)
-
+  const { cart } = useContext(CartContext)
   const { user, logout } = useAuth()
 
-  return (
-    <AppBar position="sticky" elevation={0} sx={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-      <Toolbar sx={{ justifyContent: "space-between" }}>
+  const cartCount = useMemo(
+    () => cart.reduce((total, item) => total + item.quantity, 0),
+    [cart]
+  )
 
-        <Typography
-          variant="h6"
+  return (
+    <AppBar
+      position="sticky"
+      color="default"
+      elevation={1}
+      sx={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
+    >
+      <Toolbar
+        sx={{
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 1
+        }}
+      >
+        <Box
           component={Link}
           to="/"
           sx={{
+            display: "flex",
+            alignItems: "center",
             textDecoration: "none",
-            color: "inherit",
-            fontWeight: 700
+            color: "inherit"
           }}
         >
-          My Shop
-        </Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            My Shop
+          </Typography>
+        </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap"
+          }}
+        >
+          <Button
+            component={Link}
+            to="/products"
+            color="inherit"
+            sx={{ textTransform: "none" }}
+          >
+            Products
+          </Button>
 
           <IconButton
             component={Link}
             to="/orders"
             color="inherit"
+            aria-label="Orders"
           >
             <ReceiptLongIcon />
           </IconButton>
 
-          {user && (
-            <Typography variant="body2">
-              {user.username} ({user.role})
-            </Typography>
-          )}
-
-
-          {user && (
-            <Button color="inherit" onClick={logout}>
-              Logout
+          {user ? (
+            <>
+              <Typography variant="body2" sx={{ px: 1 }}>
+                {user.username} ({user.role})
+              </Typography>
+              <Button
+                color="inherit"
+                onClick={logout}
+                sx={{ textTransform: "none" }}
+              >
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button
+              component={Link}
+              to="/login"
+              color="inherit"
+              sx={{ textTransform: "none" }}
+            >
+              Login
             </Button>
           )}
 
           <CartButton cartCount={cartCount} />
-
         </Box>
-
       </Toolbar>
     </AppBar>
   )
 }
 
-export default Navbar 
+export default Navbar

@@ -1,6 +1,12 @@
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
-const AuthContext = createContext()
+const AuthContext = createContext({
+  user: null,
+  login: async () => false,
+  logout: () => {}
+})
+
+const STORAGE_KEY = "ecommerce-user"
 
 const users = [
   { username: "admin", password: "123", role: "admin" },
@@ -10,35 +16,48 @@ const users = [
 ]
 
 export const AuthProvider = ({ children }) => {
-
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user")
-    return savedUser ? JSON.parse(savedUser) : null
+    try {
+      const savedUser = localStorage.getItem(STORAGE_KEY)
+      return savedUser ? JSON.parse(savedUser) : null
+    } catch {
+      return null
+    }
   })
 
-  const login = (username, password) => {
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  }, [user])
 
+  const login = async (username, password) => {
     const found = users.find(
-      u => u.username === username && u.password === password
+      (u) => u.username === username && u.password === password
     )
 
-  if (found) {
-      setUser(found)
-      localStorage.setItem("user", JSON.stringify(found))
-      return true
-    } else {
+    if (!found) {
       return false
     }
-  }
 
+    const safeUser = { username: found.username, role: found.role }
+    setUser(safeUser)
+    return true
+  }
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem("user")
   }
 
+  const value = useMemo(
+    () => ({ user, login, logout, isAuthenticated: Boolean(user) }),
+    [user]
+  )
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
